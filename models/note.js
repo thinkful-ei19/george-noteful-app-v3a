@@ -17,6 +17,4 @@ noteSchema.set('toObject', {
   }
 });
 
-folderId: { type: mongoose.Schema.Types.ObjectId, ref: 'Folder' }
-
 module.exports = mongoose.model('Note', noteSchema);
