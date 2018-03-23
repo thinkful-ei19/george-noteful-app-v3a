@@ -40,42 +40,41 @@ describe('Noteful API - Folders', function () {
   
       return Promise.all([dbPromise, apiPromise])
         .then(([data, res]) => {
+          console.log(res.body);
           expect(res).to.have.status(200);
           expect(res).to.be.json;
           expect(res.body).to.be.a('array');
           expect(res.body).to.have.length(data.length);
-          res.body.forEach(function (item) {
-            expect(item).to.be.a('object');
-            expect(item).to.have.keys('id', 'title', 'content', 'created');
-          });
         });
     });
   
-    it('should return an empty array for an incorrect query', function () {
-      const searchTerm = 'NotValid';
-      const re = new RegExp(searchTerm, 'i');
-      const dbPromise = Note.find({ title: { $regex: re } });
-      const apiPromise = chai.request(app).get(`/api/notes?searchTerm=${searchTerm}`);
-  
+    it('should return a list with the correct right fields', function () {
+      const dbPromise = Folder.find();
+      const apiPromise = chai.request(app).get('/api/folders');
+
       return Promise.all([dbPromise, apiPromise])
         .then(([data, res]) => {
           expect(res).to.have.status(200);
           expect(res).to.be.json;
           expect(res.body).to.be.a('array');
           expect(res.body).to.have.length(data.length);
+          res.body.forEach(function (item) {
+            expect(item).to.be.a('object');
+            expect(item).to.have.keys('id', 'name');
+          });
         });
     });
   
   });
   
-  describe('GET /api/notes/:id', function () {
+  describe('GET /api/folders/:id', function () {
   
     it('should return correct folders for a given id', function () {
       let data;
       return Folder.findOne().select('id name')
         .then(_data => {
           data = _data;
-          return chai.request(app).get(`/api/notes/${data.id}`);
+          return chai.request(app).get(`/api/folders/${data.id}`);
         })
         .then((res) => {
           expect(res).to.have.status(200);
@@ -93,7 +92,7 @@ describe('Noteful API - Folders', function () {
       const badId = '99-99-99';
   
       return chai.request(app)
-        .get(`/api/notes/${badId}`)
+        .get(`/api/folders/${badId}`)
         .catch(err => err.response)
         .then(res => {
           expect(res).to.have.status(400);
@@ -104,7 +103,7 @@ describe('Noteful API - Folders', function () {
     it('should respond with a 404 for non-existent id', function () {
   
       return chai.request(app)
-        .get('/api/notes/AAAAAAAAAAAAAAAAAAAAAAAA')
+        .get('/api/folders/AAAAAAAAAAAAAAAAAAAAAAAA')
         .catch(err => err.response)
         .then(res => {
           expect(res).to.have.status(404);
@@ -113,7 +112,7 @@ describe('Noteful API - Folders', function () {
   
   });
   
-  describe('POST /api/folders', function () {
+  describe.only('POST /api/folders', function () {
   
     it('should create and return a new item when provided valid data', function () {
       const newItem = {
@@ -129,7 +128,7 @@ describe('Noteful API - Folders', function () {
           expect(res).to.have.header('location');
           expect(res).to.be.json;
           expect(body).to.be.a('object');
-          expect(body).to.have.keys('id', 'title', 'content', 'created');
+          expect(body).to.have.keys('name','id');
           return Folder.findById(body.id);
         })
         .then(data => {
@@ -147,10 +146,11 @@ describe('Noteful API - Folders', function () {
         .send(newItem)
         .catch(err => err.response)
         .then(res => {
+          console.log(res.body);
           expect(res).to.have.status(400);
           expect(res).to.be.json;
           expect(res.body).to.be.a('object');
-          expect(res.body.message).to.equal('Missing `name` in request body');
+          expect(res.body.message).to.equal('Missing `name` in request folder');
         });
     });
 
@@ -167,7 +167,7 @@ describe('Noteful API - Folders', function () {
           expect(res).to.have.status(400);
           expect(res).to.be.json;
           expect(res.body).to.be.a('object');
-          expect(res.body.message).to.equal('Missing `name` in request body');
+          expect(res.body.message).to.equal('The folder name already exists');
         });
     });
   
@@ -221,7 +221,7 @@ describe('Noteful API - Folders', function () {
       };
   
       return chai.request(app)
-        .put('/api/notes/AAAAAAAAAAAAAAAAAAAAAAAA')
+        .put('/api/folders/AAAAAAAAAAAAAAAAAAAAAAAA')
         .send(updateItem)
         .catch(err => err.response)
         .then(res => {
@@ -242,11 +242,11 @@ describe('Noteful API - Folders', function () {
           expect(res).to.have.status(400);
           expect(res).to.be.json;
           expect(res.body).to.be.a('object');
-          expect(res.body.message).to.equal('Missing `name` in request body');
+          expect(res.body.message).to.equal('Missing `name` in request folder');
         });
     });
 
-    it('should return an error when given a duplicate name', function () {
+    it('should return an error when updating a duplicate name', function () {
       const updateItem = {
         'name': 'Personal'
       };
